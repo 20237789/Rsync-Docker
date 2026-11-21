@@ -1,0 +1,149 @@
+/* RSYNC home page. Room filters, cards and the map: browse.css (shared with /rooms). */
+@import './browse.css';
+
+:root{--ink:#0a0a0f;--ink2:#3d3d4a;--ink3:#8e8ea0;--bg:#f4f3ef;--surface:#fff;--surface-soft:#faf9f6;--amber:#e8a020;--green:#059669;--red:#dc2626;--border:rgba(0,0,0,.08);--border-strong:rgba(0,0,0,.12);--r:16px;--sh:0 2px 12px rgba(0,0,0,.06);--shadow-md:0 10px 24px rgba(0,0,0,.06);--transition-base:180ms ease;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);overflow-x:hidden;}
+a{text-decoration:none;}
+
+nav{position:fixed;inset:0 0 auto;z-index:200;display:flex;justify-content:space-between;align-items:center;padding:14px 32px;background:rgba(244,243,239,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+.nav-logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--ink);letter-spacing:3px;}
+.nav-logo span{color:var(--amber);}
+.nav-links{display:flex;gap:6px;}
+.nav-links a{font-size:14px;font-weight:500;color:var(--ink2);padding:7px 14px;border-radius:9px;transition:.18s;}
+.nav-links a:hover{background:rgba(0,0,0,.05);color:var(--ink);}
+.nav-links .cta{background:var(--ink);color:#fff;}
+.nav-links .cta:hover{background:#1e1e2e;color:#fff;}
+
+/* ── Top of the page: the map is the hero, the search card floats on its left ──
+   --hero-h = map height: big, but leaves the first row of rooms peeking above the fold. */
+.home-top{position:relative;padding-top:61px;--hero-h:clamp(480px,calc(100vh - 290px),640px);}
+.search-card{position:relative;z-index:5;width:min(420px,100% - 32px);margin:28px auto 0;padding:22px;background:rgba(255,255,255,.97);border:1px solid var(--border);border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.16);animation:fadeUp .5s .05s both;}
+.search-card h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1.12;letter-spacing:-.5px;}
+.search-card h1 em{font-style:normal;color:var(--amber);position:relative;}
+.search-card h1 em::after{content:'';position:absolute;bottom:1px;left:0;right:0;height:3px;background:var(--amber);border-radius:2px;opacity:.3;}
+.search-sub{font-size:14px;color:var(--ink3);margin:6px 0 14px;}
+.search-card .filters{box-shadow:none;border:none;padding:0;}
+.search-result{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:14px;}
+.search-result a{color:var(--ink);display:inline-flex;align-items:center;gap:3px;}
+.search-result a:hover{color:var(--amber);}
+.search-result .search-clear{font-size:13px;color:var(--ink2);text-decoration:underline;text-underline-offset:3px;}
+
+/* rooms below the map: 4 per row */
+.home-top .has-map .browse-body{grid-template-columns:minmax(0,1fr);}
+.home-top .grid,.home-top .has-map .grid{grid-template-columns:repeat(4,minmax(0,1fr));}
+.home-top .view-toggle{display:none;}
+
+/* Laptop and wider: map across the whole width, card on top of it */
+@media (min-width:961px){
+    .home-top--map .search-card{position:absolute;top:calc(61px + 24px);left:max(32px,(100% - 1680px) / 2);margin:0;max-height:calc(var(--hero-h) - 48px);overflow:auto;}
+    .home-top--map .browse{padding-top:calc(var(--hero-h) + 24px);}
+    .home-top--map .browse-map{position:absolute;top:61px;left:0;right:0;height:var(--hero-h);min-height:0;max-height:none;}
+    .home-top--map #rooms-map{border-radius:0;border:none;border-bottom:1px solid var(--border);box-shadow:none;scroll-margin-top:61px;}
+}
+/* Tablet and phone: a shorter map on top, the card under it (never over it), then List | Map */
+@media (max-width:960px){
+    .home-top--map{display:flex;flex-direction:column;}
+    .home-top--map .browse,.home-top--map .browse-body{display:contents;}
+    .home-top--map .browse-map{order:-1;display:block;position:relative;top:auto;height:300px;min-height:0;}
+    .home-top--map #rooms-map{border-radius:0;border:none;box-shadow:none;}
+    .home-top--map .search-card{margin-top:16px;box-shadow:0 8px 28px rgba(0,0,0,.08);}   /* under the map, never over it */
+    .home-top--map .browse-head{order:1;width:calc(100% - 64px);margin:24px auto 14px;scroll-margin-top:70px;}
+    .home-top--map .browse-list{order:2;width:calc(100% - 64px);margin:0 auto 36px;}
+    .home-top--map .map-ready .view-toggle{display:inline-flex;}
+    /* Map view: the switch on top, a tall map, the card and the list put away */
+    .home-top--map:has(.browse[data-view="map"]) .search-card{display:none;}
+    .home-top--map .browse[data-view="map"] .browse-head{order:-2;margin-top:16px;}
+    .home-top--map .browse[data-view="map"] .browse-map{height:calc(100svh - 150px);}
+    .home-top--map .browse[data-view="map"] .browse-list{display:none;}
+    .home-top .grid,.home-top .has-map .grid{grid-template-columns:repeat(auto-fill,minmax(230px,1fr));}
+}
+
+/* ── Sections ── */
+.section{width:min(1680px,100% - 64px);margin:0 auto;padding:44px 0;}
+.sec-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;letter-spacing:-.4px;}
+
+/* ── Landlord plans: intro on the left, the three plans beside it ── */
+.plans{display:grid;grid-template-columns:minmax(240px,300px) minmax(0,1fr);gap:28px;align-items:start;border-top:1px solid var(--border);}
+.plan-hero{display:flex;flex-direction:column;gap:16px;align-items:flex-start;position:sticky;top:90px;}
+.plans .sec-title{font-size:21px;line-height:1.2;}
+.plan-note{font-size:14px;color:var(--ink3);line-height:1.55;margin-top:6px;}
+.plan-trial{font-size:12px;color:var(--ink3);}
+.billing-toggle{display:inline-flex;gap:4px;background:rgba(0,0,0,.06);border-radius:9999px;padding:4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.04);}
+.tgl{font:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:9999px;border:none;background:transparent;color:var(--ink2);cursor:pointer;transition:var(--transition-base);}
+.tgl.active{background:#fff;color:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.08);}
+.save-tag{font-size:10px;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:999px;margin-left:6px;}
+.plans-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch;}
+.plan-card{background:var(--surface);border:1px solid var(--border-strong);border-radius:20px;padding:22px;position:relative;display:flex;flex-direction:column;transition:transform var(--transition-base),box-shadow var(--transition-base),border-color var(--transition-base);box-shadow:var(--shadow-md);}
+.plan-card:hover{transform:translateY(-4px);box-shadow:0 18px 36px rgba(0,0,0,.08);border-color:rgba(0,0,0,.16);}
+.plan-card.featured-plan{border-color:rgba(232,160,32,.35);background:linear-gradient(180deg,rgba(255,245,224,.95) 0%,var(--surface) 100%);}
+.plan-card-top{margin-bottom:6px;}
+.plan-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:2px;}
+.plan-desc{font-size:13px;color:var(--ink3);line-height:1.5;}
+.plan-price-row{display:flex;align-items:flex-end;gap:4px;margin-top:6px;}
+.plan-curr{font-size:16px;color:var(--ink3);}
+.plan-amt{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--ink);line-height:1.1;}
+.plan-per{font-size:12px;color:var(--ink3);margin-bottom:4px;}
+.plan-orig{font-size:11px;color:var(--ink3);min-height:16px;}
+.plan-divider{border:none;border-top:1px solid var(--border-strong);margin:12px 0 14px;}
+.plan-feats{list-style:none;display:flex;flex-direction:column;gap:7px;margin-bottom:18px;padding:0;}
+.pf{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--ink2);line-height:1.45;}
+.pf i{font-size:16px;flex-shrink:0;margin-top:1px;color:var(--green);}
+.pf.off{color:var(--ink3);}
+.pf.off i{color:var(--ink3);}
+.pf.featured-feat i{color:var(--amber);}
+.feat-tag{font-size:9px;padding:1px 7px;border-radius:999px;font-weight:600;margin-left:4px;background:#fff7ed;color:#c2410c;}
+.plan-btn{margin-top:auto;width:100%;padding:12px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;background:transparent;color:var(--ink);border:1.5px solid rgba(0,0,0,.16);transition:var(--transition-base);}
+.plan-btn:hover{background:rgba(0,0,0,.04);}
+.plan-btn.amber-btn{background:var(--amber);color:#fff;border-color:var(--amber);}
+.plan-btn.amber-btn:hover{background:#d08a14;}
+
+/* ── Why RSYNC: one slim dark band (four short points, no big headline) ── */
+.why{background:var(--ink);padding:32px 0;}
+.why-inner{width:min(1680px,100% - 64px);margin:0 auto;}
+.why-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;}
+.why-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:18px 20px;transition:.2s;}
+.why-card:hover{background:rgba(255,255,255,.07);}
+.why-icon{font-size:22px;color:#fbbf24;margin-bottom:8px;}
+.why-card h3{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;}
+.why-card p{font-size:13px;color:rgba(255,255,255,.55);line-height:1.5;}
+
+/* FOOTER */
+footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.06);padding:22px 32px;display:flex;justify-content:space-between;align-items:center;}
+.foot-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff;letter-spacing:2px;}
+.foot-logo span{color:var(--amber);}
+footer p{font-size:12px;color:rgba(255,255,255,.4);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
+
+@media (max-width:1180px){
+    .plans{grid-template-columns:1fr;gap:18px;}
+    .plan-hero{position:static;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;}
+    .plan-hero>div:first-child{flex:1 1 360px;}
+    .plan-trial{order:3;width:100%;}
+    .why-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (min-width:961px) and (max-width:1180px){
+    .home-top .grid,.home-top .has-map .grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+@media (max-width:860px){
+    .plans-grid{grid-template-columns:1fr;max-width:520px;}
+}
+@media (max-width:720px){
+    nav{padding:12px 16px;}
+    .nav-links a{padding:7px 10px;}
+    .home-top{padding-top:57px;}
+    .home-top--map .browse-map{height:240px;}
+    .home-top--map .browse-head,.home-top--map .browse-list{width:calc(100% - 32px);}
+    .search-card{padding:18px;}
+    .search-card h1{font-size:23px;}
+    .section,.why-inner{width:calc(100% - 32px);}
+    .section{padding:32px 0;}
+    .plans-grid{max-width:none;}
+    .why{padding:32px 0;}
+    .why-grid{grid-template-columns:1fr 1fr;gap:10px;}
+    .why-card{padding:14px;}
+    footer{flex-direction:column;gap:6px;padding:20px;}
+}

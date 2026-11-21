@@ -1,0 +1,158 @@
+<?php
+
+namespace App\Models;
+
+use App\Support\ContractDefaults;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+/**
+ * One row of `tenants` = one rental contract (a user staying in a room for a period).
+ * Named "Tenancy" so it isn't confused with users whose role is "tenant".
+ */
+class Tenancy extends Model
+{
+    protected $table = 'tenants';
+
+    protected $primaryKey = 'tenant_id';
+
+    public $timestamps = false;
+
+    protected $fillable = [
+        'user_id',
+        'room_id',
+        'start_date',
+        'end_date',
+        'status',
+        'payment_status',
+        // Copy of the contract terms ("snapshot"), saved when the tenant is assigned.
+        'monthly_rent',
+        'repairs_policy',
+        'deposit',
+        'advance_months',
+        'utilities_note',
+        'terms',
+        'house_rules',
+        'terms_updated_at',
+        // The tenant's "I agree" (empty = not accepted yet, or changed by the landlord since).
+        'accepted_at',
+        'accepted_ip',
+    ];
+
+    /** Choices for "Update Tenant Status" (admin Tenants page, from tenants.php). */
+    public const PAYMENT_STATUSES = ['Registered', 'Paid', 'On-Time', 'Delayed'];
+
+    protected function casts(): array
+    {
+        return [
+            'user_id' => 'integer',
+            'room_id' => 'integer',
+            'start_date' => 'date:Y-m-d',
+            'end_date' => 'date:Y-m-d',
+            'monthly_rent' => 'float',
+            'deposit' => 'float',
+            'advance_months' => 'integer',
+            'terms' => 'array',
+            'house_rules' => 'array',
+            'terms_updated_at' => 'datetime',
+            'accepted_at' => 'datetime',
+        ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
+    }
+
+    public function room(): BelongsTo
+    {
+        return $this->belongsTo(Room::class, 'room_id', 'room_id');
+    }
+
+    /** True when the tenant has accepted the current version of this contract. */
+    public function isAccepted(): bool
+    {
+        return $this->accepted_at !== null;
+    }
+
+    /**
+     * Next day rent is due: the start date, or the next monthly anniversary of it on/after $today.
+     * Null when that day falls after the end of the contract (nothing more to pay).
+     */
+    public function nextRentDue(?\Carbon\CarbonInterface $today = null): ?\Carbon\Carbon
+    {
+        if (! $this->start_date || ! $this->end_date) {
+            return null;
+        }
+        $today = \Carbon\Carbon::parse(($today ?? now('Asia/Manila'))->toDateString());
+        $due = $this->start_date->copy()->startOfDay();
+        for ($n = 1; $due->lt($today); $n++) {
+            $due = $this->start_date->copy()->startOfDay()->addMonthsNoOverflow($n);
+        }
+
+        return $due->lte($this->end_date) ? $due : null;
+    }
+
+    /**
+     * The months of the stay, for the month strip on the tenant dashboard:
+     * [['label' => 'Aug', 'year' => 2026, 'state' => 'past'|'now'|'next'], ...]
+     */
+    public function stayMonths(?\Carbon\CarbonInterface $today = null): array
+    {
+        if (! $this->start_date || ! $this->end_date || $this->end_date->lt($this->start_date)) {
+            return [];
+        }
+        $now = ($today ?? now('Asia/Manila'))->format('Y-m');
+        $m = $this->start_date->copy()->startOfMonth();
+        $months = [];
+        while ($m->lte($this->end_date) && count($months) < 36) {
+            $key = $m->format('Y-m');
+            $months[] = [
+                'label' => $m->format('M'),
+                'year' => (int) $m->format('Y'),
+                'state' => $key < $now ? 'past' : ($key === $now ? 'now' : 'next'),
+            ];
+            $m->addMonthNoOverflow();
+        }
+
+        return $months;
+    }
+
+    /** When it was accepted, in Philippine time, e.g. "November 15, 2026 at 6:30 PM". */
+    public function acceptedAtText(): ?string
+    {
+        return $this->accepted_at?->copy()->setTimezone('Asia/Manila')->format('F j, Y \a\t g:i A');
+    }
+
+    /** True when this contract has its own saved copy of the terms (contracts made before that feature don't). */
+    public function hasSnapshot(): bool
+    {
+        return $this->terms !== null || $this->house_rules !== null || $this->repairs_policy !== null;
+    }
+
+    /**
+     * The terms shown on the contract page:
+     * 1. the copy saved on this contract, if there is one;
+     * 2. otherwise (older contracts) the landlord's current template, or the standard format;
+     * the rent comes from the copy, or else from the room's current price.
+     */
+    public function contractTerms(): array
+    {
+        if ($this->hasSnapshot()) {
+            $terms = [
+                'repairs_policy' => $this->repairs_policy ?: ContractDefaults::DEFAULT_REPAIRS,
+                'deposit' => $this->deposit,
+                'advance_months' => $this->advance_months,
+                'utilities_note' => $this->utilities_note,
+                'terms' => $this->terms ?? [],
+                'house_rules' => $this->house_rules ?? [],
+            ];
+        } else {
+            $terms = ContractTemplate::termsFor($this->room?->owner);
+        }
+
+        $terms['monthly_rent'] = $this->monthly_rent ?? (float) ($this->room?->price ?? 0);
+
+        return $terms;
+    }
+}
